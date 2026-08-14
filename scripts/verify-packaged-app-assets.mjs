@@ -60,6 +60,11 @@ if (packagedPlatform === "win32") {
   if (existsSync(join(binDir, identity.cliCommand)) && !(statSync(join(binDir, identity.cliCommand)).mode & 0o111)) {
     failures.push(`${identity.productName} CLI shell shim is not executable.`);
   }
+} else if (packagedPlatform === "linux") {
+  assertPath(join(binDir, `${identity.cliCommand}-cli.linux.py`), `${identity.productName} CLI Linux helper`);
+  if (existsSync(join(binDir, identity.cliCommand)) && !(statSync(join(binDir, identity.cliCommand)).mode & 0o111)) {
+    failures.push(`${identity.productName} CLI shell shim is not executable.`);
+  }
 }
 for (const oldShim of ["workspace", "workspace.cmd", "workspace-cli.ps1", "workspace-cli.jxa.js"]) {
   if (existsSync(join(binDir, oldShim))) failures.push(`Legacy CLI shim must not be packaged: ${oldShim}.`);

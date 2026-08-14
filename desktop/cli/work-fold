@@ -2,7 +2,19 @@
 set -eu
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-if [ "$(uname -s)" = "Darwin" ]; then
-  exec /usr/bin/osascript -l JavaScript "$script_dir/work-fold-cli.jxa.js" "$script_dir" "$@"
-fi
-exec "$script_dir/work-fold.cmd" "$@"
+case "$(uname -s)" in
+  Darwin)
+    exec /usr/bin/osascript -l JavaScript "$script_dir/work-fold-cli.jxa.js" "$script_dir" "$@"
+    ;;
+  Linux)
+    python3="$(command -v python3 || true)"
+    if [ -z "$python3" ]; then
+      echo "work-fold: python3 is required to run the work-fold CLI on Linux." >&2
+      exit 1
+    fi
+    exec "$python3" "$script_dir/work-fold-cli.linux.py" "$script_dir" "$@"
+    ;;
+  *)
+    exec "$script_dir/work-fold.cmd" "$@"
+    ;;
+esac

@@ -49,7 +49,13 @@ module.exports = {
     {
       from: "desktop/cli",
       to: "bin",
-      filter: [identity.cliCommand, `${identity.cliCommand}.cmd`, `${identity.cliCommand}-cli.ps1`, `${identity.cliCommand}-cli.jxa.js`],
+      filter: [
+        identity.cliCommand,
+        `${identity.cliCommand}.cmd`,
+        `${identity.cliCommand}-cli.ps1`,
+        `${identity.cliCommand}-cli.jxa.js`,
+        `${identity.cliCommand}-cli.linux.py`,
+      ],
     },
   ],
   extraResources: [
@@ -95,6 +101,19 @@ module.exports = {
     notarize: macReleaseBuild,
     entitlements: path.join(root, "desktop", "entitlements.plist"),
     entitlementsInherit: path.join(root, "desktop", "entitlements.plist"),
+  },
+  linux: {
+    target: [
+      { target: "AppImage", arch: ["x64"] },
+      { target: "deb", arch: ["x64"] },
+    ],
+    icon: path.join(root, "desktop", "assets", "icon-512.png"),
+    executableName: identity.productName,
+    category: "Utility",
+    synopsis: "A local-first desktop app powered by Pi.",
+    // electron-builder's deb target requires a maintainer email; there is no
+    // public support inbox yet, so this is a placeholder pending a real one.
+    maintainer: "Mat-Tom-Son <releases@work-fold.com>",
   },
   dmg: {
     artifactName: `${identity.productName}-\${version}-mac-\${arch}.\${ext}`,
