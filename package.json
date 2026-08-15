@@ -41,7 +41,7 @@
     "desktop:package:smoke": "npm run desktop:prepare && electron-builder --config electron-builder.desktop.cjs --win --x64 --dir --publish never && npm run desktop:verify:packaged-assets -- --package-dir out/builder/win-unpacked",
     "desktop:make": "npm run desktop:prepare && electron-builder --config electron-builder.desktop.cjs --win nsis --x64 --publish never && npm run desktop:verify:release",
     "desktop:package:linux:smoke": "npm run desktop:prepare && electron-builder --config electron-builder.desktop.cjs --linux --x64 --dir --publish never && npm run desktop:verify:packaged-assets -- --package-dir out/builder/linux-unpacked",
-    "desktop:make:linux": "npm run desktop:prepare && electron-builder --config electron-builder.desktop.cjs --linux AppImage deb rpm --publish never",
+    "desktop:make:linux": "npm run desktop:prepare && electron-builder --config electron-builder.desktop.cjs --linux AppImage deb rpm --x64 --arm64 --publish never",
     "desktop:make:mac": "node scripts/build-mac-desktop.mjs --unsigned-smoke",
     "desktop:rc:mac": "node scripts/build-mac-release-candidate.mjs",
     "desktop:make:mac:release": "node scripts/build-mac-desktop.mjs --release",
