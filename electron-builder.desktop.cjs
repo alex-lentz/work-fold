@@ -104,9 +104,9 @@ module.exports = {
   },
   linux: {
     target: [
-      { target: "AppImage", arch: ["x64"] },
-      { target: "deb", arch: ["x64"] },
-      { target: "rpm", arch: ["x64"] },
+      { target: "AppImage", arch: ["x64", "arm64"] },
+      { target: "deb", arch: ["x64", "arm64"] },
+      { target: "rpm", arch: ["x64", "arm64"] },
     ],
     icon: path.join(root, "desktop", "assets", "icon-512.png"),
     executableName: identity.productName,
