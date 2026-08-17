@@ -21,6 +21,7 @@ import {
   WorkFoldTurnStore,
   type WorkFoldDurableTurnRecord,
 } from "./agent/turn-store.js";
+import { readTurnTrace } from "./agent/turn-trace.js";
 import {
   RoutedPiExtensionUiBridge,
   type PiExtensionUiEvent,
@@ -3799,6 +3800,26 @@ function createWorkFoldActFacade(state: LocalApiState): WorkFoldActFacade {
       const result = await turnResultForScope(state, space.id, space.spaceRoot, taskId);
       return { space: toActSpaceRef(space), ...result };
     },
+    async turnTrace(input) {
+      const space = await resolveSpace(input.space);
+      const taskId = input.taskId.trim();
+      if (!taskId) throw new WorkFoldCliError("usage", "Provide --task <id>.");
+      const record = state.turnStore.get(taskId);
+      if (!record || record.spaceId !== space.id) throw new WorkFoldCliError("notFound", `No turn found for task ${taskId}.`);
+      const trace = await readTurnTrace({
+        spaceRoot: space.spaceRoot,
+        conversationId: record.conversationId,
+        sessionLeafBefore: record.sessionLeafBefore ?? null,
+        sessionLeafAfter: record.sessionLeafAfter ?? null,
+      });
+      return {
+        space: toActSpaceRef(space),
+        conversationId: record.conversationId,
+        taskId,
+        available: trace.available,
+        entries: trace.entries,
+      };
+    },
     async chatRename(input) {
       assertManagementParentAccepting(state, input.parentTaskId);
       const space = await resolveSpace(input.space);
@@ -6704,11 +6725,14 @@ async function runAgentTurn(
     if (promptStarted) await captureTurnCheckpointSafe(state, spaceId, spaceRoot, conversationId, "post_turn");
     await flushTurnCheckpoint(state, key, taskId);
     const durableText = state.turnStore.get(taskId)?.assistantText ?? "";
+    const sessionLeafRange = client?.getLastTurnSessionLeafRange();
     await state.turnStore.settle(taskId, {
       status: settledStatus,
       ...(settledMessageId ? { messageId: settledMessageId } : {}),
       ...(settledError ? { error: settledError } : {}),
       assistantText: durableText,
+      sessionLeafBefore: sessionLeafRange?.before,
+      sessionLeafAfter: sessionLeafRange?.after,
     }).catch((error) => {
       console.error(`Could not persist Assistant turn settlement: ${errorMessage(error)}`);
       return null;

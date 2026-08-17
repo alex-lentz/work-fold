@@ -30,6 +30,7 @@ export type WorkFoldCliActCommandName =
   | "chat.send"
   | "chat.status"
   | "chat.result"
+  | "chat.trace"
   | "chat.abort"
   | "chat.rename"
   | "chat.snooze"
@@ -608,6 +609,12 @@ export function parseWorkFoldCliActArgv(argv: readonly string[]): WorkFoldCliAct
       allowOnlyFlags("--space", "--conversation", "--task");
       const selection = requireConversationOrTask();
       return { name: "chat.status", output, space: requireSpace(), ...selection };
+    }
+    case "chat trace": {
+      allowOnlyFlags("--space", "--task");
+      const task = stringFlag("--task")?.trim();
+      if (!task) throw usageError("Provide --task <id>.");
+      return { name: "chat.trace", output, space: requireSpace(), task };
     }
     case "chat result": {
       allowOnlyFlags("--space", "--conversation", "--task", "--messages");
@@ -1587,6 +1594,8 @@ async function runActCommand(
             conversationId: command.conversation!,
             ...(command.messages !== undefined ? { messages: command.messages } : {}),
           }));
+    case "chat.trace":
+      return toJson(await facade.turnTrace({ space: command.space!, taskId: command.task! }));
     case "chat.abort":
       return toJson(await facade.abortTurn({ space: command.space!, conversationId: command.conversation! }));
     case "chats.list":
@@ -2310,6 +2319,11 @@ function humanActOutput(name: WorkFoldCliActCommandName, data: WorkFoldCliJson):
         ? terminalText(record.lastAssistant)
         : "(no assistant reply yet)";
       return `${last}\n\n[${terminalText(record.state)}] ${terminalText(record.total)} message${record.total === 1 ? "" : "s"} in ${terminalText(record.conversationId)}\n`;
+    }
+    case "chat.trace": {
+      const trace = data as { available?: boolean; entries?: unknown[]; taskId?: string };
+      if (!trace.available) return `No trace available for task ${terminalText(trace.taskId)} (turn predates this feature, or the leaf range was not recorded).\n`;
+      return `${trace.entries?.length ?? 0} session entries for task ${terminalText(trace.taskId)}. Use --json for full detail.\n`;
     }
     case "chat.abort":
       return record.aborted ? "Aborted the active turn.\n" : "No active turn to abort.\n";

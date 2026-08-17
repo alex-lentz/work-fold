@@ -33,6 +33,7 @@ import {
   type PiRuntimeProvider,
   type ResolvedPiRuntime,
 } from "./pi-runtime-config.js";
+import { redactSecrets } from "./redact.js";
 import { type RestrictedAppProposalHost } from "./restricted-app-proposals.js";
 import type {
   RestrictedAppInstalled,
@@ -145,6 +146,8 @@ export class PiConversationClient extends EventEmitter {
   private retryAttempts = 0;
   private turnActivities = new Map<string, PiTurnActivity>();
   private lastToolEventKey = "";
+  private lastTurnSessionLeafBefore: string | null = null;
+  private lastTurnSessionLeafAfter: string | null = null;
 
   constructor(
     private readonly conversationId: string,
@@ -187,7 +190,13 @@ export class PiConversationClient extends EventEmitter {
       this.throwIfCancellationRequested();
       this.emitEvent({ type: "status", message: "The Assistant is working in this Space." });
       const messagesBefore = session.messages.length;
-      await this.promptWithTimeout(session, message);
+      this.lastTurnSessionLeafBefore = session.sessionManager.getLeafId();
+      this.lastTurnSessionLeafAfter = this.lastTurnSessionLeafBefore;
+      try {
+        await this.promptWithTimeout(session, message);
+      } finally {
+        this.lastTurnSessionLeafAfter = session.sessionManager.getLeafId();
+      }
       if (this.turnError) throw this.turnError;
       if (this.pendingAssistantError) {
         throw new PiTurnFailure({
@@ -247,6 +256,11 @@ export class PiConversationClient extends EventEmitter {
     const session = await this.ensureSession();
     if (!this.resolvedRuntime || !this.runtimeHost) throw new Error("Pi runtime is unavailable.");
     return buildPiResourceCatalog(session, this.resolvedRuntime, [...this.runtimeHost.diagnostics]);
+  }
+
+  /** The Pi session leaf-id range spanned by the most recently completed prompt() call. */
+  getLastTurnSessionLeafRange(): { before: string | null; after: string | null } {
+    return { before: this.lastTurnSessionLeafBefore, after: this.lastTurnSessionLeafAfter };
   }
 
   async getState(): Promise<PiConversationState> {
@@ -1009,7 +1023,7 @@ function formatSessionStats(stats: ReturnType<AgentSession["getSessionStats"]>):
   ].join("\n");
 }
 
-async function resolveConversationSessionPath(sessionDir: string, conversationId: string): Promise<string> {
+export async function resolveConversationSessionPath(sessionDir: string, conversationId: string): Promise<string> {
   const stablePath = conversationSessionPath(sessionDir, conversationId);
   const pointerPath = conversationPointerPath(sessionDir, conversationId);
   try {
@@ -1131,10 +1145,7 @@ function humanize(value: string): string {
 }
 
 function compactText(value: string): string {
-  return value
-    .replace(/((?:api|access|refresh)[-_ ]?(?:key|token)\s*[:=]\s*)[^\s,;)"']+/gi, "$1[redacted]")
-    .replace(/(\bBearer\s+)[^\s,;)"']+/gi, "$1[redacted]")
-    .replace(/\b(?:sk(?:-or-v1)?-|gh[pousr]_|github_pat_|xai-)[A-Za-z0-9_-]{12,}\b/gi, "[redacted]")
+  return redactSecrets(value)
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 160);

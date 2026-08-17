@@ -33,6 +33,9 @@ export interface WorkFoldDurableTurnRecord {
   assistantText: string;
   messageId?: string;
   error?: string;
+  /** Pi session-tree leaf ids spanning this turn's appended entries, for `chat trace`. */
+  sessionLeafBefore?: string;
+  sessionLeafAfter?: string;
 }
 
 export interface WorkFoldTurnStoreOptions {
@@ -169,7 +172,14 @@ export class WorkFoldTurnStore {
 
   settle(
     turnId: string,
-    input: { status: Exclude<WorkFoldDurableTurnStatus, "accepted" | "running">; messageId?: string; error?: string; assistantText?: string },
+    input: {
+      status: Exclude<WorkFoldDurableTurnStatus, "accepted" | "running">;
+      messageId?: string;
+      error?: string;
+      assistantText?: string;
+      sessionLeafBefore?: string | null;
+      sessionLeafAfter?: string | null;
+    },
   ): Promise<WorkFoldDurableTurnRecord | null> {
     return this.#update(turnId, (record) => ({
       ...record,
@@ -178,6 +188,8 @@ export class WorkFoldTurnStore {
       assistantText: (input.assistantText ?? record.assistantText).slice(0, maxDurableTurnTextChars),
       ...(input.messageId ? { messageId: input.messageId } : {}),
       ...(input.error ? { error: input.error.slice(0, 2_048) } : {}),
+      ...(input.sessionLeafBefore ? { sessionLeafBefore: input.sessionLeafBefore } : {}),
+      ...(input.sessionLeafAfter ? { sessionLeafAfter: input.sessionLeafAfter } : {}),
     }));
   }
 
@@ -310,6 +322,8 @@ function parseRecord(value: unknown): WorkFoldDurableTurnRecord {
   if (typeof record.assistantText !== "string" || record.assistantText.length > maxDurableTurnTextChars) throw new Error("Turn checkpoint is invalid.");
   if (record.messageId !== undefined) validateStableId(record.messageId, "response message id");
   if (record.error !== undefined && (typeof record.error !== "string" || record.error.length > 2_048)) throw new Error("Turn error is invalid.");
+  if (record.sessionLeafBefore !== undefined && (typeof record.sessionLeafBefore !== "string" || record.sessionLeafBefore.length > 160)) throw new Error("Turn session leaf (before) is invalid.");
+  if (record.sessionLeafAfter !== undefined && (typeof record.sessionLeafAfter !== "string" || record.sessionLeafAfter.length > 160)) throw new Error("Turn session leaf (after) is invalid.");
   return record as WorkFoldDurableTurnRecord;
 }
 

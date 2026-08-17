@@ -15,7 +15,7 @@ test("Electron Builder packages executable CLI shims outside ASAR and includes P
   assert.deepEqual(builder.extraFiles, [{
     from: "desktop/cli",
     to: "bin",
-    filter: ["work-fold", "work-fold.cmd", "work-fold-cli.ps1", "work-fold-cli.jxa.js"],
+    filter: ["work-fold", "work-fold.cmd", "work-fold-cli.ps1", "work-fold-cli.jxa.js", "work-fold-cli.linux.py"],
   }]);
   assert.equal(basename(builder.nsis.include), "cli-path.nsh");
   assert.equal(builder.asar, true);

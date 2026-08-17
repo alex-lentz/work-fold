@@ -544,6 +544,19 @@ export interface WorkFoldActFacade {
     task: { taskId: string; state: "succeeded"; endedAt: string };
     message: WorkFoldActChatMessage;
   }>;
+  /**
+   * Full turn trace for debugging/investigation: every Pi session entry the
+   * turn appended (reasoning, tool calls with full arguments, tool results,
+   * token usage, retries), read from Pi's own durable session log. Secrets
+   * are redacted; nothing here is truncated to a UI-friendly summary.
+   */
+  turnTrace(input: { space: string; taskId: string }): Promise<{
+    space: WorkFoldActSpaceRef;
+    conversationId: string;
+    taskId: string;
+    available: boolean;
+    entries: Array<{ id: string; parentId: string | null; timestamp: string; kind: string; detail: unknown }>;
+  }>;
 
   /**
    * Chat lifecycle verbs (docs/fold-act-ledger.md). Each performs exactly one
